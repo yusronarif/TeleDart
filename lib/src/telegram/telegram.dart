@@ -749,7 +749,7 @@ class Telegram {
       if (item is InputMediaPhoto) {
         dynamic photoId;
         if (item.media is io.File) {
-          files.add(MHttpClient.toMultiPartFile(item.media, 'photo'));
+          files.add(HttpClient.toMultiPartFile(item.media, 'photo'));
           final message = Message.fromJson(
             await _client.httpMultipartPost(_apiUri('sendPhoto'), files),
           );
@@ -765,14 +765,14 @@ class Telegram {
         dynamic videoId;
         dynamic thumbId;
         if (item.media is io.File) {
-          files.add(MHttpClient.toMultiPartFile(item.media, 'video'));
+          files.add(HttpClient.toMultiPartFile(item.media, 'video'));
           final message = Message.fromJson(
             await _client.httpMultipartPost(_apiUri('sendVideo'), files),
           );
           videoId = message.video.file_id;
           if (item.thumb != null) {
             if (item.thumb is io.File) {
-              files.add(MHttpClient.toMultiPartFile(item.thumb, 'thumb'));
+              files.add(HttpClient.toMultiPartFile(item.thumb, 'thumb'));
             }
           }
           thumbId = message.video.thumb.file_id;
