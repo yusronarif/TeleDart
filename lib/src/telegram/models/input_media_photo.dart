@@ -26,7 +26,7 @@ class InputMediaPhoto implements InputMedia {
   @override
   String type;
   @override
-  String media;
+  dynamic media;
   @override
   String? caption;
   @override

@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:http/http.dart' show MultipartFile;
+import 'package:path/path.dart' as path;
 
 import 'model.dart';
 import '../util/http_client.dart';
@@ -741,9 +742,78 @@ class Telegram {
           'Attribute \'chat_id\' can only be either type of String or int'));
     }
     var requestUrl = _apiUri('sendMediaGroup');
+    List<InputMedia> uploadedMedia = List();
+    for (var item in media) {
+      List<http.MultipartFile> files = List();
+      files.clear();
+      if (item is InputMediaPhoto) {
+        dynamic photoId;
+        if (item.media is io.File) {
+          files.add(http.MultipartFile(
+            'photo',
+            item.media.openRead(),
+            item.media.lengthSync(),
+            filename: path.basename(item.media.path),
+          ));
+          final message = Message.fromJson(
+            await _client.httpMultipartPost(
+              '${_baseUrl}${_token}/sendPhoto',
+              files,
+            ),
+          );
+          photoId = message.photo[0]?.file_id;
+        }
+        uploadedMedia.add(InputMediaPhoto(
+          caption: item.caption,
+          media: photoId ?? item.media,
+          parse_mode: item.parse_mode,
+        ));
+      } else if (item is InputMediaVideo) {
+        dynamic videoId;
+        dynamic thumbId;
+        if (item.media is io.File) {
+          files.add(http.MultipartFile(
+            'video',
+            item.media.openRead(),
+            item.media.lengthSync(),
+            filename: path.basename(item.media.path),
+          ));
+          final message = Message.fromJson(
+            await _client.httpMultipartPost(
+              '${_baseUrl}${_token}/sendVideo',
+              files,
+            ),
+          );
+          videoId = message.video.file_id;
+          if (item.thumb != null) {
+            if (item.thumb is io.File) {
+              files.add(http.MultipartFile(
+                'thumb',
+                item.thumb.openRead(),
+                item.thumb.lengthSync(),
+                filename: path.basename(item.thumb.path),
+              ));
+            }
+          }
+          thumbId = message.video.thumb.file_id;
+        }
+        uploadedMedia.add(InputMediaVideo(
+          caption: item.caption,
+          media: videoId ?? item.media,
+          duration: item.duration,
+          height: item.height,
+          parse_mode: item.parse_mode,
+          supports_streaming: item.supports_streaming,
+          thumb: thumbId ?? item.thumb,
+          width: item.width,
+        ));
+      } else {
+        uploadedMedia.add(item);
+      }
+    }
     var body = <String, dynamic>{
       'chat_id': chat_id,
-      'media': jsonEncode(media),
+      'media': jsonEncode(uploadedMedia),
       'disable_notification': disable_notification,
       'protect_content': protect_content,
       'reply_to_message_id': reply_to_message_id,

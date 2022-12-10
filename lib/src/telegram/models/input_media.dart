@@ -37,7 +37,7 @@ class InputMedia {
   static const VIDEO = 'video';
 
   String type;
-  String media;
+  dynamic media;
   String? caption;
   String? parse_mode;
   List<MessageEntity>? caption_entities;
