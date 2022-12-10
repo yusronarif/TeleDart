@@ -744,22 +744,14 @@ class Telegram {
     var requestUrl = _apiUri('sendMediaGroup');
     List<InputMedia> uploadedMedia = List();
     for (var item in media) {
-      List<http.MultipartFile> files = List();
-      files.clear();
+      var files = <MultipartFile>[];
+      
       if (item is InputMediaPhoto) {
         dynamic photoId;
         if (item.media is io.File) {
-          files.add(http.MultipartFile(
-            'photo',
-            item.media.openRead(),
-            item.media.lengthSync(),
-            filename: path.basename(item.media.path),
-          ));
+          files.add(MHttpClient.toMultiPartFile(item.media, 'photo'));
           final message = Message.fromJson(
-            await _client.httpMultipartPost(
-              '${_baseUrl}${_token}/sendPhoto',
-              files,
-            ),
+            await _client.httpMultipartPost(_apiUri('sendPhoto'), files),
           );
           photoId = message.photo[0]?.file_id;
         }
@@ -768,31 +760,19 @@ class Telegram {
           media: photoId ?? item.media,
           parse_mode: item.parse_mode,
         ));
-      } else if (item is InputMediaVideo) {
+      }
+      if (item is InputMediaVideo) {
         dynamic videoId;
         dynamic thumbId;
         if (item.media is io.File) {
-          files.add(http.MultipartFile(
-            'video',
-            item.media.openRead(),
-            item.media.lengthSync(),
-            filename: path.basename(item.media.path),
-          ));
+          files.add(MHttpClient.toMultiPartFile(item.media, 'video'));
           final message = Message.fromJson(
-            await _client.httpMultipartPost(
-              '${_baseUrl}${_token}/sendVideo',
-              files,
-            ),
+            await _client.httpMultipartPost(_apiUri('sendVideo'), files),
           );
           videoId = message.video.file_id;
           if (item.thumb != null) {
             if (item.thumb is io.File) {
-              files.add(http.MultipartFile(
-                'thumb',
-                item.thumb.openRead(),
-                item.thumb.lengthSync(),
-                filename: path.basename(item.thumb.path),
-              ));
+              files.add(MHttpClient.toMultiPartFile(item.thumb, 'thumb'));
             }
           }
           thumbId = message.video.thumb.file_id;
