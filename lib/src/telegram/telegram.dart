@@ -19,9 +19,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
+import 'dart:developer' as dev;
 
 import 'package:http/http.dart' show MultipartFile;
-import 'package:path/path.dart' as path;
 
 import 'model.dart';
 import '../util/http_client.dart';
@@ -741,19 +741,22 @@ class Telegram {
       return Future.error(TelegramException(
           'Attribute \'chat_id\' can only be either type of String or int'));
     }
+    dev.log('send media group', name: 'TELEDART');
+    dev.log('chat-id : $chat_id', name: 'TELEDART');
     var requestUrl = _apiUri('sendMediaGroup');
-    List<InputMedia> uploadedMedia = List();
+    var uploadedMedia = <InputMedia>[];
     for (var item in media) {
-      var files = <MultipartFile>[];
-      
       if (item is InputMediaPhoto) {
+        var multiPartFiles = <MultipartFile>[];
         dynamic photoId;
+
         if (item.media is io.File) {
-          files.add(HttpClient.toMultiPartFile(item.media, 'photo'));
-          final message = Message.fromJson(
-            await _client.httpMultipartPost(_apiUri('sendPhoto'), files),
-          );
-          photoId = message.photo[0]?.file_id;
+          multiPartFiles.add(HttpClient.toMultiPartFile(item.media, 'photo'));
+          final message = Message.fromJson(await HttpClient.httpMultipartPost(
+            _apiUri('sendPhoto'),
+            multiPartFiles,
+          ));
+          photoId = message.photo?.first.file_id;
         }
         uploadedMedia.add(InputMediaPhoto(
           caption: item.caption,
@@ -761,21 +764,29 @@ class Telegram {
           parse_mode: item.parse_mode,
         ));
       }
+
       if (item is InputMediaVideo) {
+        var multiPartFiles = <MultipartFile>[];
         dynamic videoId;
         dynamic thumbId;
+
         if (item.media is io.File) {
-          files.add(HttpClient.toMultiPartFile(item.media, 'video'));
-          final message = Message.fromJson(
-            await _client.httpMultipartPost(_apiUri('sendVideo'), files),
-          );
-          videoId = message.video.file_id;
+          multiPartFiles.add(HttpClient.toMultiPartFile(item.media, 'video'));
+          final message = Message.fromJson(await HttpClient.httpMultipartPost(
+            _apiUri('sendVideo'),
+            multiPartFiles,
+          ));
+          videoId = message.video?.file_id;
+
           if (item.thumb != null) {
+            var multiPartFiles = <MultipartFile>[];
             if (item.thumb is io.File) {
-              files.add(HttpClient.toMultiPartFile(item.thumb, 'thumb'));
+              multiPartFiles
+                  .add(HttpClient.toMultiPartFile(item.thumb, 'thumb'));
             }
           }
-          thumbId = message.video.thumb.file_id;
+          // thumbId = message.video.thumb.file_id;
+          thumbId = null;
         }
         uploadedMedia.add(InputMediaVideo(
           caption: item.caption,
@@ -787,7 +798,10 @@ class Telegram {
           thumb: thumbId ?? item.thumb,
           width: item.width,
         ));
-      } else {
+      }
+
+      if (item is InputMediaPhoto == false &&
+          item is InputMediaVideo == false) {
         uploadedMedia.add(item);
       }
     }
@@ -799,6 +813,8 @@ class Telegram {
       'reply_to_message_id': reply_to_message_id,
       'allow_sending_without_reply': allow_sending_without_reply,
     };
+
+    dev.log('body payload', name: 'TELEDART', error: body);
     return (await HttpClient.httpPost(requestUrl, body: body))
         .map<Message>((message) => Message.fromJson(message))
         .toList();
@@ -2163,14 +2179,19 @@ class Telegram {
     } else if (png_sticker is String) {
       body.addAll({'png_sticker': png_sticker});
       return await HttpClient.httpPost(requestUrl, body: body);
-    } else if (png_sticker is io.File || tgs_sticker != null || webm_sticker != null ) {
+    } else if (png_sticker is io.File ||
+        tgs_sticker != null ||
+        webm_sticker != null) {
       var file = png_sticker ?? tgs_sticker ?? webm_sticker;
-      var fieldName = png_sticker != null ? 'png_sticker' : tgs_sticker != null ? 'tgs_sticker' : 'webm_sticker';
+      var fieldName = png_sticker != null
+          ? 'png_sticker'
+          : tgs_sticker != null
+              ? 'tgs_sticker'
+              : 'webm_sticker';
       // filename cannot be empty to post to Telegram server
       var files = List<MultipartFile>.filled(
           1,
-          MultipartFile(
-              fieldName, file.openRead(), file.lengthSync(),
+          MultipartFile(fieldName, file.openRead(), file.lengthSync(),
               filename: '${file.lengthSync()}'));
       return await HttpClient.httpMultipartPost(requestUrl, files, body: body);
     } else {
@@ -2208,14 +2229,19 @@ class Telegram {
     } else if (png_sticker is String) {
       body.addAll({'png_sticker': png_sticker});
       return await HttpClient.httpPost(requestUrl, body: body);
-    } else if (png_sticker is io.File || tgs_sticker != null || webm_sticker != null ) {
+    } else if (png_sticker is io.File ||
+        tgs_sticker != null ||
+        webm_sticker != null) {
       var file = png_sticker ?? tgs_sticker ?? webm_sticker;
-      var fieldName = png_sticker != null ? 'png_sticker' : tgs_sticker != null ? 'tgs_sticker' : 'webm_sticker';
+      var fieldName = png_sticker != null
+          ? 'png_sticker'
+          : tgs_sticker != null
+              ? 'tgs_sticker'
+              : 'webm_sticker';
       // filename cannot be empty to post to Telegram server
       var files = List<MultipartFile>.filled(
           1,
-          MultipartFile(
-              fieldName, file.openRead(), file.lengthSync(),
+          MultipartFile(fieldName, file.openRead(), file.lengthSync(),
               filename: '${file.lengthSync()}'));
       return await HttpClient.httpMultipartPost(requestUrl, files, body: body);
     } else {
